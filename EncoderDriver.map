@@ -1,0 +1,124 @@
+MPLINK 4.36, Linker
+Linker Map File - Created Mon Jul 25 08:50:40 2016
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000002
+                   .cinit    romdata   0x000001    program   0x000004
+                   .org_1       code   0x000004    program   0x0001dc
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000002      
+                            0x000004    0x0000f1      
+            241 out of 2182 program addresses used, program memory utilization is 11%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                    Algo1   0x000077    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               Algo1_Loop   0x0000a2    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Algo2   0x0000a0    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Algo3   0x000023    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+           Algo3EndSwitch   0x000060    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+         Algo3EndSwitch_1   0x00006a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+         Algo3EndSwitch_2   0x000073    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Algo3Exit   0x000075    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Begin   0x000022    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE0   0x000029    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE1   0x000036    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE2   0x000043    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE3   0x000050    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+            CheckNextDest   0x00008d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+           CheckNextDest2   0x00009d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               CounterDec   0x00009a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               CounterInc   0x00008a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                DEC_COUNT   0x0000e0    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               Del_500mks   0x0000e7    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 EncMinus   0x00005d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                  EncPlus   0x00005f    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                  End_int   0x00000e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                     Exit   0x00009d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                INC_COUNT   0x0000d9    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    ISR_0   0x000008    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    ISR_1   0x00000e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                     Init   0x00001a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Interrupt   0x000004    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 MainCikl   0x000023    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Port_init   0x000013    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              QUAD_ACTION   0x0000b3    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               QUAD_STATE   0x0000a9    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Reset   0x000000    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanEncoder   0x00007d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanLabel_1   0x000088    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanLabel_2   0x000098    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+             _.org_1_00EC   0x0000ec    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+             _.org_1_00EE   0x0000ee    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_0   0x00002c    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_0_1   0x000031    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_1   0x00003a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_1_1   0x00003e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_2   0x000047    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_2_1   0x00004c    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_3   0x000054    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_3_1   0x000059    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                    Reset   0x000000    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Interrupt   0x000004    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    ISR_0   0x000008    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    ISR_1   0x00000e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                  End_int   0x00000e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Port_init   0x000013    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                     Init   0x00001a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Begin   0x000022    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Algo3   0x000023    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 MainCikl   0x000023    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE0   0x000029    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_0   0x00002c    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_0_1   0x000031    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE1   0x000036    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_1   0x00003a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_1_1   0x00003e    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE2   0x000043    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_2   0x000047    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_2_1   0x00004c    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    CASE3   0x000050    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                   case_3   0x000054    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 case_3_1   0x000059    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                 EncMinus   0x00005d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                  EncPlus   0x00005f    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+           Algo3EndSwitch   0x000060    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+         Algo3EndSwitch_1   0x00006a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+         Algo3EndSwitch_2   0x000073    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                Algo3Exit   0x000075    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Algo1   0x000077    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanEncoder   0x00007d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanLabel_1   0x000088    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               CounterInc   0x00008a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+            CheckNextDest   0x00008d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              ScanLabel_2   0x000098    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               CounterDec   0x00009a    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                     Exit   0x00009d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+           CheckNextDest2   0x00009d    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                    Algo2   0x0000a0    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               Algo1_Loop   0x0000a2    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               QUAD_STATE   0x0000a9    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+              QUAD_ACTION   0x0000b3    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                INC_COUNT   0x0000d9    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+                DEC_COUNT   0x0000e0    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+               Del_500mks   0x0000e7    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+             _.org_1_00EC   0x0000ec    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+             _.org_1_00EE   0x0000ee    program     static D:\CD_WORK\Microchip\Projects\EncoderDriver\main.asm
+
+

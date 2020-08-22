@@ -1,0 +1,875 @@
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;********************************************
+                      00002 ;
+                      00003 ; ДРАЙВЕР ЭНКОДЕРА
+                      00004 ;
+                      00005 ;
+                      00006 ; File version 1.0
+                      00007 ; Date begin:   17/04/2013
+                      00008 ; Date end:     
+                      00009 ; Last edition: 29/10/2012
+                      00010 ;
+                      00011 ; Author: Oborin Sergey
+                      00012 ; UKRAINE, Lutsk
+                      00013 ;
+                      00014         list            p=16f628        ; Директива определения типа контроллера
+                      00015 
+                      00016 ;CONFIG      OSC=HS                       ; тактирование от кварца частотой 20МГц
+                      00017 ;CONFIG      OSCS=OFF                ; запретить переключать частоту тактирования микроконтроллера
+                      00018 ;CONFIG      PWRT=ON                      ; включать задержку на 72мс после включения питания      
+                      00019 ;CONFIG      BOR=ON, BORV=45   ; схему сброса по провалу питания включить. Порог = 4,5В
+                      00020 ; старайтесь использовать сторожевой таймер всегда!
+                      00021 ;CONFIG      WDT=ON;, WDTPS=128 ; сторожевой таймер включить, период 2,3 сек
+                      00022 ;CONFIG      STVR=ON                      ; по переполнению стека давать сброс микроконтроллера
+                      00023 
+                      00024         #include        <p16f628.inc>   ; Подключаем стандартный файл заголовка MPLAB
+                      00001         LIST
+                      00002 ; P16F628.INC  Standard Header File, Version 1.01    Microchip Technology, Inc.
+Message[301]: MESSAGE: (Processor-header file mismatch.  Verify selected processor.)
+                      00261         LIST
+                      00025         radix           hex             ; Формат чисел по умолчанию - шестнадцатиричный
+                      00026 
+                      00027         
+                      00028 
+                      00029         
+                      00030 ;------------------------------------------------------------------------------
+                      00031         ;Задание слова конфигурации (соответствия аббревиатур битам
+                      00032         ;                            см. в файле p16F84.inc)
+                      00033 
+                      00034 ;       __CONFIG _CP_OFF & _WDT_OFF
+                      00035 ;       __CONFIG _CP_ON & _WDT_ON & _HS_OSC & _PWRT_ON
+                      00036 
+                      00037 
+                      00038 ;------------------------------------------------------------------------------
+                      00039 
+                      00040 ;               --- КОНСТАНТЫ ---
+  01312D00            00041 F_OSC           equ             .20000000
+                      00042 
+                      00043 ;------------------------------------------------------------------------------
+                      00044 
+                      00045 ;               --- МАКРОКОМАНДЫ ---
+                      00046 
+                      00047 ;______________________________________________________________________________
+                      00048 
+                      00049 ;--------
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00050 ; Start of available RAM.
+                      00051 ;--------
+                      00052 ;       cblock  0x21
+                      00053 ;               safe_w          ;not really temp, used by interrupt svc
+                      00054 ;               safe_s          ;not really temp, used by interrupt svc
+                      00055 ;
+                      00056 ;       endc
+                      00057 #define EXT_OUT0        PORTA,0;
+                      00058 #define EXT_OUT1        PORTA,1;
+                      00059 
+                      00060 #define EXT_INT0        PORTB,0;
+                      00061 #define EXT_INT1        PORTB,1;
+                      00062 
+                      00063 #define JUMPER1         PORTB,2
+                      00064 #define JUMPER2         PORTB,3
+                      00065 
+                      00066 #define ENC_PORT        PORTB
+                      00067 
+                      00068 ;#define PWM_INT_PIN PORTA,1
+                      00069 
+                      00070 ;
+                      00071 ; Переменные
+                      00072 ;
+                      00073         CBLOCK  0Ch
+  0000000C            00074         safe_w  :1
+  0000000D            00075         safe_s  :1
+  0000000E            00076         Reg_1   :1
+  0000000F            00077         Reg_2   :1
+  00000010            00078         Reg_3   :1
+  00000011            00079         CurrentState    :1;
+  00000012            00080         OldState                :1;
+                      00081 
+  00000013            00082         Q_1: 1;
+  00000014            00083         Q_NOW: 1;
+  00000015            00084         QUAD_ACT: 1;
+  00000016            00085         COUNT: 1;
+                      00086 
+                      00087         ENDC
+                      00088 ;               --- ПУСК ---
+                      00089 
+                      00090                 ORG     0x0000          ; Вектор сброса - с этого адреса PIC
+                      00091                                         ; начинает выполнение программы
+0000                  00092 Reset   
+0000   2???           00093                 goto    Begin           ; Безусловный переход на начало основной программы
+                      00094                                         ; (обходим обработчик прерываний и подпрограммы)
+                      00095 
+                      00096 ;------------------------------------------------------------------------------
+                      00097 ;               --- ОБРАБОТЧИК ПРЕРЫВАНИЙ ---
+                      00098 
+                      00099                 ORG     4                       ; Вектор прерываний - переход по этому адресу
+                      00100 ;                                               ; осуществляется аппаратно при установке флага
+                      00101 ;                                               ; запроса на любое незамаскированное прерывание,
+                      00102 ;                                               ; при этом аппаратно сбрасывается бит GIE
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00103 ;
+0004                  00104 Interrupt       
+0004   008C           00105                 movwf   safe_w                  ; Сохранение контекста - содержимого регистров
+0005   0803           00106                 movf    STATUS,W                ; W и STATUS, потому что оно может измениться
+Warning[219]: Invalid RAM location specified.
+0006   008D           00107                 movwf   safe_s                  ; в процессе работы обработчика прерываний
+                      00108 ;
+0007   0064           00109                 clrwdt
+                      00110 
+                      00111 ;               Здесь будет располагаться сама подпрограмма обработки прерываний
+0008                  00112 ISR_0:
+                      00113     ; ... test bit to see if it is set
+0008   1D0B           00114     BTFSS   INTCON,T0IF     ; Timeer0 Overflow?
+0009   2???           00115     GOTO    ISR_1           ; No, check next thing.
+                      00116     ;
+                      00117     ; Else process Timer 0 Overflow Interrupt
+                      00118     ;
+000A   110B           00119     BCF     INTCON, T0IF    ; Clear interrupt
+000B   3085           00120     MOVLW   D'133'          ; Reset 1khz counter
+000C   0081           00121     MOVWF   TMR0            ; Store it.
+                      00122 
+000D   2???           00123         call    Algo3
+                      00124 ;    CALL    QUAD_STATE      ; Check Quadrature Encoders.
+                      00125 
+                      00126 ;       movwf   OldState
+                      00127 
+                      00128 ;       btfss   OldState,7
+                      00129 ;       goto    CounterDec
+                      00130 
+                      00131 ;       btfss   OldState,1
+                      00132 ;       goto    CounterInc
+                      00133 
+                      00134 ;    GOTO    ISR_1           ; Nope, keep counting
+000E                  00135 ISR_1:  
+                      00136 ;
+                      00137 ; Exit the interrupt service routine. 
+                      00138 ; This involves recovering W and STATUS and then
+                      00139 ; returning. Note that putting STATUS back 
+                      00140 ; automatically pops the bank back as well.
+                      00141 ;  This takes 6 Tcy for a total overhead of 12 Tcy for sync
+                      00142 ;  interrupts and 13 Tcy for async interrupts.
+                      00143 
+000E                  00144 End_int 
+Warning[219]: Invalid RAM location specified.
+000E   080D           00145                 movf    safe_s,W                ; Восстанавливаем контекст
+000F   0083           00146                 movwf   STATUS  
+0010   0E8C           00147                 swapf   safe_w,F                ; Тут приходится хитрить, чтобы сохранить бит Z в STATUS
+0011   0E0C           00148                 swapf   safe_w,W                ; (movf его может изменить, а swapf - нет)
+0012   0009           00149                 retfie                          ; Возврат из обработчика с установкой бита GIE
+                      00150 
+                      00151 ;--------
+                      00152 ; unused pins I am setting to be outputs
+                      00153 ;--------
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0013                  00154 Port_init       
+                      00155                 
+                      00156 ;               BANKSEL trisa
+0013   0185           00157                 clrf    PORTA
+0014   0186           00158                 clrf    PORTB
+                      00159 
+0015   30FC           00160                 movlw   b'11111100'
+Warning[224]: Use of this instruction is not recommended.
+0016   0065           00161                 tris    PORTA; // PWM_PORT
+                      00162 
+0017   300F           00163                 movlw   b'00001111'
+Warning[224]: Use of this instruction is not recommended.
+0018   0066           00164                 tris    PORTB
+                      00165 
+0019   3400           00166                 retlw   0
+                      00167 
+001A                  00168 Init
+                      00169   ; * * * * * *
+                      00170     ; * BANK 1 Operations
+                      00171     ; * * * * * *
+001A   1683           00172     BSF     STATUS,RP0      ; Set Bank 1
+001B   3004           00173     MOVLW   B'0000100'      ; Set TMR0 prescaler to 8
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+001C   0081           00174     MOVWF   OPTION_REG      ; Store it in the OPTION register
+                      00175     ; * * * * * * * * * * *
+                      00176     ; * BANK 0 Operations *
+                      00177     ; * * * * * * * * * * *
+001D   0183           00178     CLRF    STATUS          ; Back to BANK 0
+001E   168B           00179     BSF     INTCON, T0IE    ; Enable Timer 0 to interrupt
+001F   110B           00180     BCF     INTCON, T0IF    ; Reset interrupt flag
+0020   178B           00181     BSF     INTCON, GIE     ; Enable interrupts
+0021   3400           00182         retlw   0
+                      00183 
+0022                  00184 Begin
+0022   2???           00185                 call    Port_init
+                      00186 ;               call    Init
+                      00187                 
+0023                  00188 MainCikl
+                      00189 ;               btfsc   ENC_PORT,0
+                      00190 ;               goto    m222
+                      00191 
+                      00192 ;               btfsc   ENC_PORT,1
+                      00193 ;               goto    m111
+                      00194 
+                      00195 ;               goto    MainCikl
+                      00196 ;m111   
+                      00197 ;               bcf             EXT_OUT0                        ; УВЕЛИЧИТЬ ТИПА КОНТЕР
+                      00198 ;               bsf             EXT_OUT0
+                      00199 ;               bcf             EXT_OUT0
+                      00200 ;               call    Del_500mks
+                      00201 ;               goto    MainCikl
+                      00202 ;m222   
+                      00203 ;               bcf             EXT_OUT1                        ; УВЕЛИЧИТЬ ТИПА КОНТЕР
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00204 ;               bsf             EXT_OUT1
+                      00205 ;               bcf             EXT_OUT1
+                      00206 ;               call    Del_500mks
+                      00207 ;               goto    MainCikl
+                      00208 
+                      00209 
+0023                  00210 Algo3
+0023   0806           00211                 movf    ENC_PORT,0              ; in            r16,PinD                        ;загружа
+                            ем значение порта D в регистр 
+0024   3903           00212                 andlw   3                               ;andi   r16,0b00000011          ;выделить два по
+                            следних бита R16
+0025   0091           00213                 movwf   CurrentState
+0026   0212           00214                 subwf   OldState,0
+0027   1903           00215                 btfsc   STATUS,2
+0028   2???           00216                 goto    Algo3Exit
+                      00217 ;switch OldState
+0029                  00218 CASE0
+0029   0892           00219                 movf    OldState,1
+002A   1D03           00220                 btfss   STATUS,2
+002B   2???           00221                 goto    CASE1                           ;CASE 1
+002C                  00222 case_0
+002C   3002           00223                 movlw   2
+002D   0211           00224                 subwf   CurrentState,0
+002E   1D03           00225                 btfss   STATUS,2
+002F   2???           00226                 goto    case_0_1
+0030   2???           00227                 goto    EncPlus
+                      00228         
+0031                  00229 case_0_1
+0031   3001           00230                 movlw   1
+0032   0211           00231                 subwf   CurrentState,0
+0033   1D03           00232                 btfss   STATUS,2
+0034   2???           00233                 goto    Algo3EndSwitch
+0035   2???           00234                 goto    EncMinus
+0036                  00235 CASE1
+0036   3001           00236                 movlw   1
+0037   0212           00237                 subwf   OldState,0
+0038   1D03           00238                 btfss   STATUS,2
+0039   2???           00239                 goto    CASE2                           ; CASE 2
+003A                  00240 case_1
+003A   0891           00241                 movf    CurrentState,1
+003B   1D03           00242                 btfss   STATUS,2
+003C   2???           00243                 goto    case_1_1
+003D   2???           00244                 goto    EncPlus
+                      00245         
+003E                  00246 case_1_1
+003E   3003           00247                 movlw   3
+003F   0211           00248                 subwf   CurrentState,0
+0040   1D03           00249                 btfss   STATUS,2
+0041   2???           00250                 goto    Algo3EndSwitch
+0042   2???           00251                 goto    EncMinus
+                      00252 
+0043                  00253 CASE2
+0043   3002           00254                 movlw   2
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0044   0212           00255                 subwf   OldState,0
+0045   1D03           00256                 btfss   STATUS,2
+0046   2???           00257                 goto    CASE3                           ; CASE 2
+0047                  00258 case_2
+0047   3003           00259                 movlw   3
+0048   0211           00260                 subwf   CurrentState,0
+0049   1D03           00261                 btfss   STATUS,2
+004A   2???           00262                 goto    case_2_1
+004B   2???           00263                 goto    EncPlus
+                      00264         
+004C                  00265 case_2_1
+004C   0891           00266                 movf    CurrentState,1
+004D   1D03           00267                 btfss   STATUS,2
+004E   2???           00268                 goto    Algo3EndSwitch
+004F   2???           00269                 goto    EncMinus
+                      00270 
+0050                  00271 CASE3
+0050   3003           00272                 movlw   3
+0051   0212           00273                 subwf   OldState,0
+0052   1D03           00274                 btfss   STATUS,2
+0053   2???           00275                 goto    Algo3EndSwitch
+0054                  00276 case_3
+0054   3001           00277                 movlw   1
+0055   0211           00278                 subwf   CurrentState,0
+0056   1D03           00279                 btfss   STATUS,2
+0057   2???           00280                 goto    case_3_1
+0058   2???           00281                 goto    EncPlus
+                      00282         
+0059                  00283 case_3_1
+0059   3002           00284                 movlw   2
+005A   0211           00285                 subwf   CurrentState,0
+005B   1D03           00286                 btfss   STATUS,2
+005C   2???           00287                 goto    Algo3EndSwitch
+                      00288 
+005D                  00289 EncMinus
+Message[305]: Using default destination of 1 (file).
+005D   0A??           00290                 incf    EncMinus
+005E   2???           00291                 goto    Algo3EndSwitch
+005F                  00292 EncPlus
+005F   0A??           00293                 incf    EncPlus,1
+                      00294                 
+0060                  00295 Algo3EndSwitch
+0060   3004           00296                 movlw   4
+0061   02??           00297                 subwf   EncPlus,0
+0062   1D03           00298                 btfss   STATUS,2
+0063   2???           00299                 goto    Algo3EndSwitch_1
+                      00300 
+0064   1005           00301                 bcf             EXT_OUT0                        ; УВЕЛИЧИТЬ ТИПА КОНТЕР
+0065   1405           00302                 bsf             EXT_OUT0
+0066   1005           00303                 bcf             EXT_OUT0
+                      00304                 
+0067   0103           00305                 clrw
+0068   00??           00306                 movwf   EncPlus
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0069   2???           00307                 goto    Algo3EndSwitch_2
+                      00308 
+006A                  00309 Algo3EndSwitch_1
+006A   3004           00310                 movlw   4
+006B   02??           00311                 subwf   EncMinus,0
+006C   1D03           00312                 btfss   STATUS,2
+006D   2???           00313                 goto    Algo3EndSwitch_2
+                      00314 
+006E   1085           00315                 bcf             EXT_OUT1
+006F   1485           00316                 bsf             EXT_OUT1
+0070   1085           00317                 bcf             EXT_OUT1
+                      00318 
+0071   0103           00319                 clrw
+0072   00??           00320                 movwf   EncMinus
+                      00321 
+0073                  00322 Algo3EndSwitch_2
+                      00323                 
+0073   0811           00324                 movf    CurrentState,0
+0074   0092           00325                 movwf   OldState
+0075                  00326 Algo3Exit
+0075   2???           00327                 goto    Algo3
+                      00328 
+0076   0008           00329                 return
+0077                  00330 Algo1:
+                      00331 ;               out             PortB,RegLed            ;показываем что у нас в регистре RegLed через Po
+                            rtB
+                      00332 
+0077   0806           00333                 movf    ENC_PORT,0              ; in            r16,PinD                        ;загружа
+                            ем значение порта D в регистр 
+0078   3903           00334                 andlw   H'3'                    ;andi   r16,0b00000011          ;выделить два последних 
+                            бита R16
+0079   0091           00335                 movwf   CurrentState
+007A   0212           00336                 subwf   OldState,0
+007B   1903           00337                 btfsc   STATUS,2
+007C   2???           00338                 goto    Exit
+                      00339 
+                      00340 ;               btfss   ENC_PORT,0
+                      00341 ;               goto    Exit
+                      00342 
+                      00343 ;               bcf             EXT_OUT0
+                      00344 ;               bsf             EXT_OUT0
+                      00345 
+                      00346 ;               goto    Algo1
+007D                  00347 ScanEncoder:            
+007D   1891           00348                 btfsc   CurrentState,1; проверим B ;if (!now_b) // 1) B = 0
+007E   2???           00349                 goto    CheckNextDest
+                      00350 
+007F   1C11           00351                 btfss   CurrentState,0; проверим A; if (now_a) // 2) A = 1
+0080   2???           00352                 goto    CheckNextDest
+                      00353 
+0081   1812           00354                 btfsc   OldState,0;             проверим CurrentA <> OldA (OldA = 0)
+0082   2???           00355                 goto    CheckNextDest
+                      00356 
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0083   1C91           00357                 btfss   CurrentState,1 ; проверим B на 1
+0084   2???           00358                 goto    ScanLabel_1
+                      00359 
+0085   1C92           00360                 btfss   OldState,1
+0086   2???           00361                 goto    CheckNextDest
+0087   2???           00362                 goto    CounterInc
+                      00363 
+0088                  00364 ScanLabel_1
+0088   1892           00365                 btfsc   OldState,1
+0089   2???           00366                 goto    CheckNextDest
+008A                  00367 CounterInc
+008A   1005           00368                 bcf             EXT_OUT0
+008B   1405           00369                 bsf             EXT_OUT0
+008C   2???           00370                 goto    Exit
+                      00371 
+008D                  00372 CheckNextDest
+                      00373 ;               goto    Exit
+                      00374 
+008D   1C91           00375                 btfss   CurrentState,1; проверим B ;if (now_b) // 1) B = 1
+008E   2???           00376                 goto    CheckNextDest2
+                      00377 
+008F   1811           00378                 btfsc   CurrentState,0; проверим A; if (now_a) // 2) A = 0
+0090   2???           00379                 goto    CheckNextDest2
+                      00380 
+0091   1812           00381                 btfsc   OldState,0;             проверим CurrentA = OldA (OldA = 1)
+0092   2???           00382                 goto    CheckNextDest2
+                      00383 
+0093   1C91           00384                 btfss   CurrentState,1 ; проверим B на 1
+0094   2???           00385                 goto    ScanLabel_2
+                      00386 
+0095   1892           00387                 btfsc   OldState,1
+0096   2???           00388                 goto    CheckNextDest2
+0097   2???           00389                 goto    CounterDec
+                      00390 
+0098                  00391 ScanLabel_2
+0098   1C92           00392                 btfss   OldState,1
+0099   2???           00393                 goto    CheckNextDest2
+009A                  00394 CounterDec
+009A   1085           00395                 bcf             EXT_OUT1
+009B   1485           00396                 bsf             EXT_OUT1
+009C   2???           00397                 goto    Exit
+                      00398         
+009D                  00399 CheckNextDest2
+009D                  00400 Exit
+009D   0811           00401                 movf    CurrentState,0
+009E   0092           00402                 movwf   OldState
+009F   2???           00403                 goto    Algo1
+                      00404 
+00A0                  00405 Algo2
+                      00406 
+00A0   3000           00407         movlw   0
+00A1   0096           00408         movwf   COUNT
+                      00409 
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00A2                  00410 Algo1_Loop
+00A2   2???           00411         call    QUAD_STATE
+00A3   0092           00412         movwf   OldState
+                      00413 
+00A4   1F92           00414         btfss   OldState,7
+00A5   2???           00415         goto    CounterDec
+                      00416 
+00A6   1C92           00417         btfss   OldState,1
+00A7   2???           00418         goto    CounterInc
+                      00419 
+00A8   2???           00420         goto    Algo1_Loop
+                      00421 ;
+                      00422 ; QUAD State
+                      00423 ;
+                      00424 ; A quadrature encoder traverse a couple of states
+                      00425 ; when it is rotating these are:
+                      00426 ;       00      |  Counter
+                      00427 ;       10      |  Clockwise
+                      00428 ;       11      |     ^
+                      00429 ;       01      V     |
+                      00430 ;       00  Clockwise |
+                      00431 ;
+                      00432 ;
+00A9                  00433 QUAD_STATE:
+00A9   1003           00434     BCF     STATUS,C        ; Force Carry to be zero
+00AA   0806           00435     MOVF    ENC_PORT,W         ; Read the encoder
+00AB   3903           00436     ANDLW   H'3'            ; And it with 0110
+Warning[219]: Invalid RAM location specified.
+00AC   0093           00437     MOVWF   Q_1             ; Store it
+                      00438         
+Warning[219]: Invalid RAM location specified.
+00AD   0D94           00439     RLF     Q_NOW,F         ; Rotate Q_NOW Left
+Warning[219]: Invalid RAM location specified.
+00AE   0D14           00440     RLF     Q_NOW,W         ; by two 
+Warning[219]: Invalid RAM location specified.
+00AF   0413           00441     IORWF   Q_1,W           ; Or in the current value
+00B0   0095           00442     MOVWF   QUAD_ACT        ; Store at as next action
+Warning[219]: Invalid RAM location specified.
+00B1   0813           00443     MOVF    Q_1,W           ; Get last time
+Warning[219]: Invalid RAM location specified.
+00B2   0094           00444     MOVWF   Q_NOW           ; And store it.
+                      00445 ;
+                      00446 ; Return the value of what we should do to the 
+                      00447 ; value to adjust it.
+                      00448 ;        
+00B3                  00449 QUAD_ACTION:        
+                      00450     ;
+                      00451     ; Computed jump based on Quadrature pin state.
+                      00452     ;
+00B3   018A           00453     CLRF    PCLATH  ; Must be in page 0!!!
+00B4   0782           00454     ADDWF   PCL,F   ; Indirect jump
+00B5   3400           00455     RETLW   H'00'   ; 00 -> 00
+00B6   34FF           00456     RETLW   H'FF'   ; 00 -> 01 -1
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00B7   3401           00457     RETLW   H'01'   ; 00 -> 10 +1
+00B8   3400           00458     RETLW   H'00'   ; 00 -> 11
+00B9   3401           00459     RETLW   H'01'   ; 01 -> 00 +1
+00BA   3400           00460     RETLW   H'00'   ; 01 -> 01
+00BB   3400           00461     RETLW   H'00'   ; 01 -> 10 
+00BC   34FF           00462     RETLW   H'FF'   ; 01 -> 11 -1
+00BD   34FF           00463     RETLW   H'FF'   ; 10 -> 00 -1
+00BE   3400           00464     RETLW   H'00'   ; 10 -> 01
+00BF   3400           00465     RETLW   H'00'   ; 10 -> 10
+00C0   3401           00466     RETLW   H'01'   ; 10 -> 11 +1
+00C1   3400           00467     RETLW   H'00'   ; 11 -> 00
+00C2   3401           00468     RETLW   H'01'   ; 11 -> 01 +1
+00C3   34FF           00469     RETLW   H'FF'   ; 11 -> 10 -1
+00C4   3400           00470     RETLW   H'00'   ; 11 -> 11    ;
+                      00471 
+                      00472     ; Computed jump based on Quadrature pin state.
+                      00473     ;
+00C5   30??           00474     MOVLW   high QUAD_STATE
+00C6   008A           00475     MOVWF   PCLATH
+00C7   0815           00476     MOVF    QUAD_ACT,W      ; Get button state
+00C8   0782           00477     ADDWF   PCL,F           ; Indirect jump
+00C9   0008           00478     RETURN                  ; 00 -> 00
+00CA   2???           00479     GOTO    DEC_COUNT       ; 00 -> 01 -1
+00CB   2???           00480     GOTO    INC_COUNT       ; 00 -> 10 +1
+00CC   0008           00481     RETURN                  ; 00 -> 11
+00CD   2???           00482     GOTO    INC_COUNT       ; 01 -> 00 +1
+00CE   0008           00483     RETURN                  ; 01 -> 01
+00CF   0008           00484     RETURN                  ; 01 -> 10 
+00D0   2???           00485     GOTO    DEC_COUNT       ; 01 -> 11 -1
+00D1   2???           00486     GOTO    DEC_COUNT       ; 10 -> 00 -1
+00D2   0008           00487     RETURN                  ; 10 -> 01
+00D3   0008           00488     RETURN                  ; 10 -> 10
+00D4   2???           00489     GOTO    INC_COUNT       ; 10 -> 11 +1
+00D5   0008           00490     RETURN                  ; 11 -> 00
+00D6   2???           00491     GOTO    INC_COUNT       ; 11 -> 01 +1
+00D7   2???           00492     GOTO    DEC_COUNT       ; 11 -> 10 -1
+00D8   0008           00493     RETURN                  ; 11 -> 11
+00D9                  00494 INC_COUNT:
+00D9   0A96           00495     INCF    COUNT,F
+00DA   30C9           00496     MOVLW   D'201'
+00DB   0216           00497     SUBWF   COUNT,W
+00DC   1D03           00498     BTFSS   STATUS,Z
+00DD   0008           00499     RETURN
+00DE   0396           00500     DECF    COUNT,F
+00DF   0008           00501     RETURN
+00E0                  00502 DEC_COUNT
+00E0   0396           00503     DECF    COUNT,F
+00E1   30FF           00504     MOVLW   H'FF'
+00E2   0216           00505     SUBWF   COUNT,W
+00E3   1D03           00506     BTFSS   STATUS,Z
+00E4   0008           00507     RETURN          
+00E5   0A96           00508     INCF    COUNT,F
+00E6   0008           00509     RETURN      
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00510                 
+                      00511 
+00E7                  00512 Del_500mks
+                      00513 ; Задержка 2 500 машинных циклов
+                      00514 ; Длительность задержки 500 микросекунд
+                      00515 ; Частота задающего генератора 20 МГц
+                      00516 
+00E7   303D           00517             movlw       .61
+00E8   008E           00518             movwf       Reg_1
+00E9   3004           00519             movlw       .4
+00EA   008F           00520             movwf       Reg_2
+00EB   0B8E           00521             decfsz      Reg_1,F
+00EC   2???           00522             goto        $-1
+00ED   0B8F           00523             decfsz      Reg_2,F
+00EE   2???           00524             goto        $-3
+00EF   0000           00525             nop
+00F0   0000           00526             nop                 
+00F1   3400           00527                         retlw   0
+                      00528 
+                      00529                 END
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+Algo1                             00000077
+Algo1_Loop                        000000A2
+Algo2                             000000A0
+Algo3                             00000023
+Algo3EndSwitch                    00000060
+Algo3EndSwitch_1                  0000006A
+Algo3EndSwitch_2                  00000073
+Algo3Exit                         00000075
+BRGH                              00000002
+Begin                             00000022
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CASE0                             00000029
+CASE1                             00000036
+CASE2                             00000043
+CASE3                             00000050
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+COUNT                             00000016
+CREN                              00000004
+CSRC                              00000007
+CheckNextDest                     0000008D
+CheckNextDest2                    0000009D
+CounterDec                        0000009A
+CounterInc                        0000008A
+CurrentState                      00000011
+DC                                00000001
+DEC_COUNT                         000000E0
+Del_500mks                        000000E7
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 13
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+EEIE                              00000007
+EEIF                              00000007
+ENC_PORT                          PORTB
+EXT_INT0                          PORTB,0
+EXT_INT1                          PORTB,1
+EXT_OUT0                          PORTA,0
+EXT_OUT1                          PORTA,1
+EncMinus                          0000005D
+EncPlus                           0000005F
+End_int                           0000000E
+Exit                              0000009D
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+F_OSC                             01312D00
+GIE                               00000007
+INC_COUNT                         000000D9
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+ISR_0                             00000008
+ISR_1                             0000000E
+Init                              0000001A
+Interrupt                         00000004
+JUMPER1                           PORTB,2
+JUMPER2                           PORTB,3
+MainCikl                          00000023
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+OPTION_REG                        00000081
+OSCF                              00000003
+OldState                          00000012
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 14
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+PS2                               00000002
+PSA                               00000003
+Port_init                         00000013
+QUAD_ACT                          00000015
+QUAD_ACTION                       000000B3
+QUAD_STATE                        000000A9
+Q_1                               00000013
+Q_NOW                             00000014
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+Reg_1                             0000000E
+Reg_2                             0000000F
+Reg_3                             00000010
+Reset                             00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+SYNC                              00000004
+ScanEncoder                       0000007D
+ScanLabel_1                       00000088
+ScanLabel_2                       00000098
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 15
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_.org_1_00EC                      000000EC
+_.org_1_00EE                      000000EE
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_CP_50                            00002BFF
+_CP_75                            000017FF
+_CP_ALL                           000003FF
+_CP_OFF                           00003FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+MPASM  5.36                          MAIN.ASM   7-25-2016  8:50:39         PAGE 16
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+__16F628A                         00000001
+case_0                            0000002C
+case_0_1                          00000031
+case_1                            0000003A
+case_1_1                          0000003E
+case_2                            00000047
+case_2_1                          0000004C
+case_3                            00000054
+case_3_1                          00000059
+safe_s                            0000000D
+safe_w                            0000000C
+
+Errors   :     0
+Warnings :    10 reported,     0 suppressed
+Messages :     3 reported,     0 suppressed
+
+

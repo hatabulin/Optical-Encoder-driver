@@ -1,0 +1,13 @@
+Message[301] C:\PROGRAM FILES (X86)\MICROCHIP\MPASM SUITE\P16F628.INC 35 : MESSAGE: (Processor-header file mismatch.  Verify selected processor.)
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 107 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 145 : Invalid RAM location specified.
+Warning[224] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 161 : Use of this instruction is not recommended.
+Warning[224] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 164 : Use of this instruction is not recommended.
+Message[302] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 174 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[305] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 290 : Using default destination of 1 (file).
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 437 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 439 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 440 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 441 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 443 : Invalid RAM location specified.
+Warning[219] D:\CD_WORK\MICROCHIP\PROJECTS\ENCODERDRIVER\MAIN.ASM 444 : Invalid RAM location specified.
